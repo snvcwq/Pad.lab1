@@ -3,26 +3,25 @@ using System.Net.Sockets;
 
 namespace Common;
 
-public static class SocketSettings
+public class SocketSettings
 {
     private const int Port = 8001;
-    
-     /// <summary>
-     /// Creates Socket with generic settings
-     /// </summary>
-     /// <returns>Created Socket and IPEndPoint of socket</returns>
-    public static async Task<(Socket,IPEndPoint)>CreateSocket()
+
+    /// <summary>
+    ///     Creates Socket with generic settings
+    /// </summary>
+    /// <returns>Created Socket and IPEndPoint of socket</returns>
+    public async Task<(Socket, IPEndPoint)> CreateSocket()
     {
         var ipEndPoint = await CreateDefaultIpEndpoint();
         return (new Socket(
             ipEndPoint.AddressFamily,
             SocketType.Stream,
             ProtocolType.Tcp
-
         ), ipEndPoint);
     }
 
-    private static async Task<IPEndPoint> CreateDefaultIpEndpoint()
+    private async Task<IPEndPoint> CreateDefaultIpEndpoint()
     {
         var ipEntry = await Dns.GetHostEntryAsync(Dns.GetHostName());
         var ip = ipEntry.AddressList.FirstOrDefault();
@@ -31,6 +30,4 @@ public static class SocketSettings
 
         return new IPEndPoint(ip, Port);
     }
-    
-    
 }

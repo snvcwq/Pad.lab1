@@ -1,3 +1,8 @@
 ﻿namespace Common.Models;
 
-public record Message(string From, string To, object JsonContent);
+public class Message
+{
+    public string From { get; set; }
+    public List<string> To { get; set; } = new();
+    public object JsonContent { get; set; }
+}

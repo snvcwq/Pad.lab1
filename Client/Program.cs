@@ -1,37 +1,36 @@
-﻿using System.Net.Sockets;   
-using System.Text;
+﻿using System.Net.Sockets;
 using Common;
+using Common.Models;
 
-var (client, ipEndPoint) = await SocketSettings.CreateSocket();
+var socketSettings = new SocketSettings();
+var (client, ipEndPoint) = await socketSettings.CreateSocket();
 await client.ConnectAsync(ipEndPoint);
 
-Console.WriteLine("Connected to the broker.");
 
-// Start receiving messages in the background
-_ = Task.Run(ReceiveMessagesAsync);
 
 while (true)
 {
-    Console.WriteLine("Insert message:");
-    var message = Console.ReadLine();
-    
-    if (string.IsNullOrEmpty(message))
+    try
     {
-        Console.WriteLine("Empty message, not sent.");
-        continue;
-    }
+        Console.WriteLine("Insert Message:");
+       var message = new ClientRegistration("id");
+        await client.SendAsync(message.JsonSerialize().ToBytes(), SocketFlags.None);
+        var buffer = new byte[1_024];
 
-    var messageBytes = Encoding.UTF8.GetBytes(message);
-    await client.SendAsync(messageBytes, SocketFlags.None);
-}
-
-async Task ReceiveMessagesAsync()
-{
-    var buffer = new byte[1024];
-    while (true)
-    {
         var received = await client.ReceiveAsync(buffer, SocketFlags.None);
-        var message = Encoding.UTF8.GetString(buffer, 0, received);
-        Console.WriteLine($"Received: {message}");
+        var messageResponse = received.FromBytes(buffer);
+        Console.WriteLine(messageResponse);
     }
+    catch (Exception e)
+    {
+        Console.WriteLine($"An error occured when trying to send message Message: {e.Message}");
+    }
+            
 }
+
+/*
+await RegistrationHandler.RegisterClient();
+
+_ = Task.Run(ReceiveMessageHandler.StartReceivingMessages);
+
+_ = Task.Run(SendMessagesHandler.StartSendingMessages);*/

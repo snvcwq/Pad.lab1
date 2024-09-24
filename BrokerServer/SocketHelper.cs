@@ -1,59 +1,64 @@
 ﻿using System.Net.Sockets;
-using System.Text;
-using System.Text.Json;
+using Common;
 using Common.Models;
 
 namespace BrokerServer;
 
 public static class SocketHelper
 {
-    public static async Task StartAcceptingClients(this Socket server)
+    public static async Task HandleClientMessagesAsync(this Socket clientSocket)
     {
+        await clientSocket.AcceptAsync();
         while (true)
-        {
-            var clientSocket = await server.AcceptAsync();
-            
-            var buffer = new byte[1024];
-            var received = await clientSocket.ReceiveAsync(buffer, SocketFlags.None);
-            var message = JsonSerializer.Deserialize<ClientRegistration>(received);
-            if (message is null)
+            try
             {
-                Console.WriteLine("Could not deserialize ClientRegistration message, client will not be added");
-                continue;
+                var buffer = new byte[1_024];
+                var received = await clientSocket.ReceiveAsync(buffer, SocketFlags.None);
+                var message = received.FromBytes(buffer).JsonDeserialize<Message>();
+                var response = new MessageResponse();
+                const string deserializeErrorMessage =
+                    "Could Not Deserialize Client's Message. Message will not be handled";
+                if (message is null)
+                {
+                    response.HasError = true;
+                    response.Messages.Add(deserializeErrorMessage);
+                    Console.WriteLine(deserializeErrorMessage);
+                    await clientSocket.SendAsync(response.JsonSerialize().ToBytes(), SocketFlags.None);
+                    continue;
+                }
+
+                response.Messages.Add("Message was received");
+                var messageSender = SocketClients.Get(message.From);
+                if (messageSender is null)
+                    AddClient(message.From, clientSocket, response);
+
+                foreach (var clientIdentifier in message.To)
+                {
+                    var client = SocketClients.Get(clientIdentifier);
+                    if (client is null)
+                    {
+                        response.Messages.Add($"Server does not have client with Identifier {clientIdentifier}");
+                    }
+                    else
+                    {
+                        var msg = $"Message from {message.From}. \n Message: {message.JsonContent}";
+                        await client.SendAsync(msg.JsonSerialize().ToBytes(), SocketFlags.None);
+                        response.Messages.Add($"Message was sent to {clientIdentifier}.");
+                    }
+                }
+
+                await clientSocket.SendAsync(response.JsonSerialize().ToBytes(), SocketFlags.None);
             }
-            SocketClients.Add(message.Identifier, clientSocket);
-            
-            _ = Task.Run(() => clientSocket.HandleClientMessagesAsync());
-        }
+            catch (Exception e)
+            {
+                Console.WriteLine($"An error occured when processing a message. Message: {e.Message}");
+                throw;
+            }
     }
 
-    private static async Task HandleClientMessagesAsync(this Socket clientSocket)
+    private static void AddClient(string identifier, Socket client, MessageResponse response)
     {
-        var buffer = new byte[1024];
-    
-        while (true)
-        {
-            var received = await clientSocket.ReceiveAsync(buffer, SocketFlags.None);
-            var message = JsonSerializer.Deserialize<Message>(received);
-
-            if (message is null)
-            {
-                Console.WriteLine("Could Not Deserialize Client's Message.Message will not be handled");
-                continue;
-            }
-
-
-            var response = "Message received"u8.ToArray();
-            await clientSocket.SendAsync(response, SocketFlags.None);
-
-            // Forward message to other clients
-            foreach (var client in clients)
-            {
-                if (client != clientSocket) // Do not send message back to sender
-                {
-                    await client.SendAsync(Encoding.UTF8.GetBytes(message), SocketFlags.None);
-                }
-            }
-        }   
+        var isAdded = SocketClients.Add(identifier, client);
+        response.Messages.Add(isAdded ? "Client was successfully added" : "An error occured when trying to add client");
     }
 }

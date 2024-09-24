@@ -1,6 +1,8 @@
 ﻿using BrokerServer;
 using Common;
 
-var (server, ipEndPoint) = await SocketSettings.CreateSocket();
-await server.StartListening(ipEndPoint);
-await server.StartAcceptingClients();
+var socketSettings = new SocketSettings();
+var (server, ipEndPoint) = await socketSettings.CreateSocket();
+server.StartListening(ipEndPoint);
+Console.WriteLine("Server Started Listening");
+await server.HandleClientMessagesAsync();

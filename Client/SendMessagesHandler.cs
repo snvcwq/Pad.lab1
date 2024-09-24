@@ -1,29 +1,51 @@
 ﻿using System.Net.Sockets;
-using System.Text;
+using Common;
+using Common.Models;
 
 namespace Client;
 
-public class SendMessagesHandler
+public static class SendMessagesHandler
 {
-    public static async Task HandleSendingMessages(Socket client)
+    public static async Task StartSendingMessages()
     {
         while (true)
         {
-            Console.WriteLine("Insert Message:");
-            var message = Console.ReadLine();
-            if (string.IsNullOrEmpty(message))
+            try
             {
-                Console.WriteLine("Was Inserted an empty string, message will not be sent");
-                continue;
+                var message = new Message();
+                Console.WriteLine("Insert Message:");
+                message.JsonContent = Console.ReadLine()!;
+                if (string.IsNullOrEmpty(message.JsonContent.ToString()))
+                {
+                    Console.WriteLine("Was Inserted an empty string, message Insert a valid one");
+                    continue;
+                }
+
+                int numberOfReceivers;
+                string? insertedNumberOfReceivers;
+                do
+                {
+                    insertedNumberOfReceivers = Console.ReadLine();
+                } while (int.TryParse(insertedNumberOfReceivers, out numberOfReceivers) || numberOfReceivers <= 0);
+
+                for (var i = 0; i < numberOfReceivers; i++)
+                    message.To.Add(Console.ReadLine()!);
+                message.From = ClientData.Identifier;
+
+                await ClientData.Socket.SendAsync(message.JsonSerialize().ToBytes(), SocketFlags.None);
+                var buffer = new byte[1_024];
+
+                var received = await ClientData.Socket.ReceiveAsync(buffer, SocketFlags.None);
+                var messageResponse = received.FromBytes(buffer).JsonDeserialize<MessageResponse>();
+                Console.WriteLine(messageResponse is { HasError: true }
+                    ? $"Server returned error: Messages: {string.Concat(",", messageResponse.Messages)}"
+                    : $"Response from server {string.Concat(",", messageResponse?.Messages)}");
             }
-            var messageBytes = Encoding.UTF8.GetBytes(message);
-            await client.SendAsync(messageBytes, SocketFlags.None);
-            var buffer = new byte[1_024];
-
-            var received = await client.ReceiveAsync(buffer, SocketFlags.None);
-
-            var receiverMessage = Encoding.UTF8.GetString(buffer, 0, received);
-            Console.WriteLine(message);
+            catch (Exception e)
+            {
+                Console.WriteLine($"An error occured when trying to send message Message: {e.Message}");
+            }
+            
         }
     }
 }

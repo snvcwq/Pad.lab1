@@ -6,21 +6,36 @@ namespace Client;
 
 public static class ReceiveMessageHandler
 {
-    public static async Task StartReceivingMessages()
+    public static async Task StartReceivingMessagesAsync(Socket clientSocket)
     {
-        var buffer = new byte[1_024];
-        while (true)
+        try
         {
-            try
+            while (true)
             {
-                var received = await ClientData.Socket.ReceiveAsync(buffer, SocketFlags.None);
-                var message = received.FromBytes(buffer).JsonDeserialize<Message>();
-                Console.WriteLine($"Got a message from : {message?.From}: \n {message?.JsonContent}");
+                var buffer = new byte[1_024];
+                var received = await clientSocket.ReceiveAsync(buffer, SocketFlags.None);
+                if (received == 0)
+                {
+                    Console.WriteLine("Server disconnected.");
+                    break;
+                }
+
+                var messageResponse = received.FromBytes(buffer).JsonDeserialize<MessageResponse>();
+                if (messageResponse == null) continue;
+                Console.WriteLine("Message received from server:".AddInfoPrefix());
+                foreach (var response in messageResponse.Messages)
+                {
+                    Console.WriteLine(response);
+                }
             }
-            catch (Exception e)
-            {
-                Console.WriteLine($"An error occured when trying to receive message: {e.Message}");
-            }
+        }
+        catch (SocketException se)
+        {
+            Console.WriteLine($"SocketException occurred: {se.Message}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred while receiving messages: {ex.Message}");
         }
     }
 }

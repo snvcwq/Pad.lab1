@@ -7,7 +7,6 @@ var (client, ipEndPoint) = await socketSettings.CreateSocket();
 await client.ConnectAsync(ipEndPoint);
 
 RegistrationHandler.AddClientIdentifier();
-
 while (true)
 {
     try
@@ -19,6 +18,8 @@ while (true)
             var result =await client.SendMessageAsync(message);
             if (!result.HasError)
                 ClientData.IsRegistered = true;
+            _ = Task.Run(() => ReceiveMessageHandler.StartReceivingMessagesAsync(client)); 
+
         }
         else
         {
@@ -34,10 +35,3 @@ while (true)
     }
             
 }
-
-/*
-await RegistrationHandler.RegisterClient();
-
-_ = Task.Run(ReceiveMessageHandler.StartReceivingMessages);
-
-_ = Task.Run(SendMessagesHandler.StartSendingMessages);*/

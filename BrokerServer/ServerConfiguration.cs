@@ -9,5 +9,6 @@ public static class ServerConfiguration
     {
         server.Bind(ipEndPoint);
         server.Listen();
+        Console.WriteLine($"Server started Listening on port {ipEndPoint.Port}");
     }
 }

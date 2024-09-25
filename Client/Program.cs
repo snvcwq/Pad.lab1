@@ -1,4 +1,4 @@
-﻿using System.Net.Sockets;
+﻿using Client;
 using Common;
 using Common.Models;
 
@@ -6,20 +6,27 @@ var socketSettings = new SocketSettings();
 var (client, ipEndPoint) = await socketSettings.CreateSocket();
 await client.ConnectAsync(ipEndPoint);
 
-
+RegistrationHandler.AddClientIdentifier();
 
 while (true)
 {
     try
     {
-        Console.WriteLine("Insert Message:");
-       var message = new ClientRegistration("id");
-        await client.SendAsync(message.JsonSerialize().ToBytes(), SocketFlags.None);
-        var buffer = new byte[1_024];
-
-        var received = await client.ReceiveAsync(buffer, SocketFlags.None);
-        var messageResponse = received.FromBytes(buffer);
-        Console.WriteLine(messageResponse);
+        var message = new Message { From = ClientData.Identifier };
+        if (!ClientData.IsRegistered)
+        {
+            Console.WriteLine("Trying to register client");
+            var result =await client.SendMessageAsync(message);
+            if (!result.HasError)
+                ClientData.IsRegistered = true;
+        }
+        else
+        {
+            Console.WriteLine("Sending Message:");
+            SendMessagesHandler.SetMessageReceivers(message);
+            SendMessagesHandler.SetMessageContent(message);
+            await client.SendMessageAsync(message);
+        }
     }
     catch (Exception e)
     {

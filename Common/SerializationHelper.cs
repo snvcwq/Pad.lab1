@@ -1,5 +1,6 @@
 ﻿using System.Text;
-using System.Text.Json;
+using Newtonsoft.Json;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Common;
 
@@ -7,17 +8,26 @@ public static class SerializationHelper
 {
     public static string JsonSerialize(this object obj)
     {
-        return JsonSerializer.Serialize(obj);
+        return JsonConvert.SerializeObject(obj);
     }
 
-    public static byte[] ToBytes(this string str)
+    public static byte[] ToBytes(this string? str)
     {
         return Encoding.UTF8.GetBytes(str);
     }
 
     public static T? JsonDeserialize<T>(this string str)
     {
-        return JsonSerializer.Deserialize<T>(str);
+        T? value = default;
+        try
+        {
+            return JsonConvert.DeserializeObject<T>(str);
+
+        }
+        catch (Exception)
+        {
+            return value;
+        }
     }
 
     public static string FromBytes(this int received, byte[] buffer)

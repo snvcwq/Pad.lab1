@@ -6,46 +6,54 @@ namespace Client;
 
 public static class SendMessagesHandler
 {
-    public static async Task StartSendingMessages()
+    public static void SetMessageReceivers(Message message)
     {
-        while (true)
+        int receivers;
+        string receiversNumber;
+        do
         {
-            try
+            Console.WriteLine("Insert number of receivers");
+            receiversNumber = Console.ReadLine()!;
+        } while (!int.TryParse(receiversNumber, out receivers));
+
+        for (var i = 0; i < receivers; i++)
+        {
+            string receiver;
+            do
             {
-                var message = new Message();
-                Console.WriteLine("Insert Message:");
-                message.JsonContent = Console.ReadLine()!;
-                if (string.IsNullOrEmpty(message.JsonContent.ToString()))
-                {
-                    Console.WriteLine("Was Inserted an empty string, message Insert a valid one");
-                    continue;
-                }
-
-                int numberOfReceivers;
-                string? insertedNumberOfReceivers;
-                do
-                {
-                    insertedNumberOfReceivers = Console.ReadLine();
-                } while (int.TryParse(insertedNumberOfReceivers, out numberOfReceivers) || numberOfReceivers <= 0);
-
-                for (var i = 0; i < numberOfReceivers; i++)
-                    message.To.Add(Console.ReadLine()!);
-                message.From = ClientData.Identifier;
-
-                await ClientData.Socket.SendAsync(message.JsonSerialize().ToBytes(), SocketFlags.None);
-                var buffer = new byte[1_024];
-
-                var received = await ClientData.Socket.ReceiveAsync(buffer, SocketFlags.None);
-                var messageResponse = received.FromBytes(buffer).JsonDeserialize<MessageResponse>();
-                Console.WriteLine(messageResponse is { HasError: true }
-                    ? $"Server returned error: Messages: {string.Concat(",", messageResponse.Messages)}"
-                    : $"Response from server {string.Concat(",", messageResponse?.Messages)}");
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"An error occured when trying to send message Message: {e.Message}");
-            }
-            
+                Console.WriteLine("Insert receiver identifier");
+                 receiver = Console.ReadLine()!;
+            } while (string.IsNullOrEmpty(receiver));
+            message.To.Add(receiver);
         }
     }
+
+    public static void SetMessageContent(Message message)
+    {
+        string msg;
+        do
+        {
+            Console.WriteLine("Insert Message:");
+            msg = Console.ReadLine()!;
+        } while (string.IsNullOrEmpty(msg));
+        message.JsonContent = msg;
+    }
+
+    public static async Task<MessageResponse> SendMessageAsync(this Socket socket, Message message)
+    {
+        
+        await socket.SendAsync(message.JsonSerialize().ToBytes(), SocketFlags.None);
+        var buffer = new byte[1_024];
+
+        var received = await socket.ReceiveAsync(buffer, SocketFlags.None);
+        var messageResponse = received.FromBytes(buffer).JsonDeserialize<MessageResponse>();
+        Console.WriteLine(messageResponse!.HasError
+            ? "Sending Message ended with error"
+            : "Sending Message ended successfully");
+
+        foreach (var response in messageResponse.Messages)
+            Console.WriteLine(response);
+        return messageResponse;
+    }
+   
 }

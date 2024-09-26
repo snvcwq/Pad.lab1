@@ -14,7 +14,9 @@ while (true)
         var message = new Message { From = ClientData.Identifier };
         if (!ClientData.IsRegistered)
         {
-            Console.WriteLine("Trying to register client");
+            Console.WriteLine("Trying to register client".AddInfoPrefix());
+            SendMessagesHandler.AddClientTopics(message);
+            message.RegisterClient = true;
             var result =await client.SendMessageAsync(message);
             if (!result.HasError)
                 ClientData.IsRegistered = true;
@@ -23,7 +25,8 @@ while (true)
         }
         else
         {
-            Console.WriteLine("Sending Message:");
+            message.RegisterClient = false;
+            Console.WriteLine("Sending Message:".AddInfoPrefix());
             SendMessagesHandler.SetMessageReceivers(message);
             SendMessagesHandler.SetMessageContent(message);
             await client.SendMessageAsync(message);
@@ -31,7 +34,7 @@ while (true)
     }
     catch (Exception e)
     {
-        Console.WriteLine($"An error occured when trying to send message Message: {e.Message}");
+        Console.WriteLine($"An error occured when trying to send message Message: {e.Message}".AddInfoPrefix());
     }
             
 }

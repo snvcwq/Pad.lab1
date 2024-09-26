@@ -16,7 +16,7 @@ public static class ReceiveMessageHandler
                 var received = await clientSocket.ReceiveAsync(buffer, SocketFlags.None);
                 if (received == 0)
                 {
-                    Console.WriteLine("Server disconnected.");
+                    Console.WriteLine("Server disconnected.".AddInfoPrefix());
                     break;
                 }
 
@@ -31,11 +31,11 @@ public static class ReceiveMessageHandler
         }
         catch (SocketException se)
         {
-            Console.WriteLine($"SocketException occurred: {se.Message}");
+            Console.WriteLine($"SocketException occurred: {se.Message}".AddInfoPrefix());
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"An error occurred while receiving messages: {ex.Message}");
+            Console.WriteLine($"An error occurred while receiving messages: {ex.Message}".AddInfoPrefix());
         }
     }
 }

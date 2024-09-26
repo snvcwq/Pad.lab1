@@ -62,7 +62,7 @@ public static class SocketHelper
     {
         if (message is not null) return false;
         var deserializeErrorMessage =
-            "After deserialization, message was empty. Message will not be processed".AddInfoPrefix();
+            "After deserialization, message was empty. Message will not be processed".AddBrokerPrefix();
         response.HasError = true;
         response.Messages.Add(deserializeErrorMessage);
         Console.WriteLine(deserializeErrorMessage);
@@ -73,7 +73,7 @@ public static class SocketHelper
     private static async Task<bool> CheckIfMessageHaveSenderAsync(Socket handler, Message? message, MessageResponse response)
     {
         if (!string.IsNullOrEmpty(message?.From)) return true;
-        var error = "No Identifier provided. Message will not be processed".AddInfoPrefix();
+        var error = "No Identifier provided. Message will not be processed".AddBrokerPrefix();
         response.Messages.Add(error);
         Console.WriteLine(error);
         await handler.SendMessage(response);
@@ -82,8 +82,8 @@ public static class SocketHelper
     
     private static async Task<bool> CheckIfMessageHaveRecipientsAsync(Socket handler, Message? message, MessageResponse response)
     {
-        if (message is not { To.Count: 0 }) return true;
-        var errorMessage = "No receiver provided. Message will not be sent to any  clients".AddInfoPrefix();
+        if (message is not { Topics.Count: 0 }) return true;
+        var errorMessage = "No topics provided. Message will not be sent to any  clients".AddBrokerPrefix();
         response.Messages.Add(errorMessage);
         Console.WriteLine(errorMessage + $"from {message.From}");
         await handler.SendMessage(response);
@@ -91,44 +91,37 @@ public static class SocketHelper
     }
     private static async Task<bool> AddClientIfNeededAsync(Socket handler, Message? message, MessageResponse response)
     {
-        if (SocketClients.Get(message!.From) is not null) return false;
-        var isAdded = SocketClients.Add(message.From, handler);
-        if (isAdded)
-            response.Messages.Add("Client was registered successfully".AddInfoPrefix());
-        else
+        if (message.RegisterClient)
         {
-            response.Messages.Add("An error occured when adding client, try another identifier".AddInfoPrefix());
-            response.HasError = true;
+            foreach (var topic in message.Topics)
+                Topics.Add(topic, handler);
+            response.Messages.Add($"Client successfully subscribed to topics".AddBrokerPrefix());
+            await handler.SendMessage(response);
+            return true;
         }
-
-        await handler.SendMessage(response);
-        return true;
+        return false;
     }
     
     private static async Task ForwardMessageToRecipientsAsync(Message? message, MessageResponse response)
     {
-        foreach (var receiverIdentifier in message!.To)
+        await Parallel.ForEachAsync(message?.Topics!,  async (topic, _) =>
         {
-            var client = SocketClients.Get(receiverIdentifier);
-            if (client is null)
-            {
-                var noClientMessage =
-                    $"No client with identifier {receiverIdentifier}. He will not get the message".AddInfoPrefix();
-                response.Messages.Add(noClientMessage);
-                Console.WriteLine(noClientMessage);
-            }
+            var clients = Topics.GetTopicClients(topic);
+            if(!clients.Any())
+                response.Messages.Add($"No client is consuming {topic} topic".AddBrokerPrefix());
             else
             {
-                var msg = new MessageResponse();
-                msg.Messages.Add("----------------------------------------------------------");
-                msg.Messages.Add($"You got a message from {message.From}");
-                msg.Messages.Add(message.JsonContent.ToString()!);
-                msg.Messages.Add("----------------------------------------------------------");
-                await client.SendMessage(msg);
-                var successMessage = $"Message was sent to {receiverIdentifier}".AddInfoPrefix();
-                response.Messages.Add(successMessage);
-                Console.WriteLine(successMessage + $" from {message.From}");
+                await Parallel.ForEachAsync(clients, _, async (client, _) =>
+                {
+                        var msg = new MessageResponse();
+                        msg.Messages.Add("----------------------------------------------------------");
+                        msg.Messages.Add($"You got a message from {message.From} threw topic {topic}");
+                        msg.Messages.Add(message.JsonContent.ToString()!);
+                        msg.Messages.Add("----------------------------------------------------------");
+                        await client.SendMessage(msg);
+                });
+                response.Messages.Add($"All {topic} consumers got the message".AddBrokerPrefix());
             }
-        }
+        });
     }
 }

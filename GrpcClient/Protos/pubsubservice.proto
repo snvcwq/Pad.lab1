@@ -1,0 +1,32 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "gRPCServer";
+
+package pubsubservice;
+
+service PubSubService {
+  // Client sends registration data (identifier, topics)
+  rpc RegisterClient (ClientRegistration) returns (RegistrationResponse);
+
+  // Client sends messages for a specific topic
+  rpc SendMessageToTopic (stream TopicMessage) returns (stream TopicMessage);
+}
+
+// Message format for client registration
+message ClientRegistration {
+  string clientId = 1;
+  repeated string topics = 2;
+}
+
+// Response from the server to confirm registration
+message RegistrationResponse {
+  bool success = 1;
+  repeated string messages = 2;
+}
+
+// Message format for sending/receiving topic messages
+message TopicMessage {
+  string topic = 1;
+  string clientId = 2;
+  string message = 3;
+}

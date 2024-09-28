@@ -1,49 +1,61 @@
-﻿using Grpc.Core;
+﻿using System.Collections.Concurrent;
+using Grpc.Core;
 
-namespace gRPCServer.Services;
-
-public class PubSubSvc: PubSubService.PubSubServiceBase
+namespace gRPCServer.Services
 {
-    private readonly Dictionary<string, List<string>> _clientSubscriptions = new();
-    private readonly List<IServerStreamWriter<TopicMessage>> _connectedClients = new();
-
-    // Register the client and their topics
-    public override Task<RegistrationResponse> RegisterClient(ClientRegistration request, ServerCallContext context)
+    public class PubSubSvc : PubSub.PubSubBase
     {
-        _clientSubscriptions[request.ClientId] = request.Topics.ToList();
-        return Task.FromResult(new RegistrationResponse
+        // Dictionary to store clients and their subscribed topics
+        private readonly ConcurrentDictionary<string, List<string>> _clientSubscriptions = new();
+
+        // List to store active client streams for broadcasting messages
+        private readonly List<IServerStreamWriter<TopicMessageResponse>> _connectedClients = new();
+
+        // Register the client and their topics
+        public override Task<RegistrationResponse> RegisterClient(ClientRegistration request, ServerCallContext context)
         {
-            Success = true,
-            Messages = { $"Client {request.ClientId} registered successfully" }
-        });
-    }
-
-    // Handle sending and receiving topic messages
-    public override async Task SendMessageToTopic(IAsyncStreamReader<TopicMessage> requestStream, IServerStreamWriter<TopicMessage> responseStream, ServerCallContext context)
-    {
-        _connectedClients.Add(responseStream);
-
-        await foreach (var message in requestStream.ReadAllAsync())
-        {
-            var topic = message.Topic;
-
-            // Check which clients are subscribed to the topic
-            var subscribedClients = _clientSubscriptions
-                .Where(sub => sub.Value.Contains(topic))
-                .Select(sub => sub.Key);
-
-            // Broadcast the message to the clients subscribed to this topic
-            foreach (var client in subscribedClients)
+            // Store the client's subscribed topics
+            _clientSubscriptions[request.ClientId] = request.Topics.ToList();
+            return Task.FromResult(new RegistrationResponse
             {
-                foreach (var clientStream in _connectedClients)
+                Success = true,
+                Messages = { $"Client {request.ClientId} registered successfully with topics: {string.Join(", ", request.Topics)}" }
+            });
+        }
+
+        // Handle sending and receiving topic messages
+        public override async Task SendMessageToTopic(
+            IAsyncStreamReader<TopicMessage> requestStream,
+            IServerStreamWriter<TopicMessageResponse> responseStream,
+            ServerCallContext context)
+        {
+            // Add the response stream to the list of connected clients
+            _connectedClients.Add(responseStream);
+
+            await foreach (var message in requestStream.ReadAllAsync())
+            {
+                // Iterate through all topics the message is targeting
+                foreach (var topic in message.Topics)
                 {
-                    // Send the message to all clients that are connected
-                    await clientStream.WriteAsync(new TopicMessage
+                    // Check which clients are subscribed to the topic
+                    var subscribedClients = _clientSubscriptions
+                        .Where(sub => sub.Value.Contains(topic))
+                        .Select(sub => sub.Key);
+
+                    // Prepare the message to broadcast
+                    var response = new TopicMessageResponse
                     {
+                        Topic = topic,
                         ClientId = message.ClientId,
-                        Topic = message.Topic,
-                        Message = message.Message
-                    });
+                        Messages = { message.Message }
+                    };
+
+                    // Broadcast the message to the clients subscribed to this topic
+                    foreach (var clientStream in _connectedClients)
+                    {
+                        // Send the message to all connected clients
+                        await clientStream.WriteAsync(response);
+                    }
                 }
             }
         }

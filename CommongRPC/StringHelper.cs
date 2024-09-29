@@ -1,4 +1,4 @@
-﻿namespace Common;
+﻿namespace CommongRPC;
 
 public static class StringHelper
 {

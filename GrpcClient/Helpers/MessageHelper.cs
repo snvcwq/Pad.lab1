@@ -1,10 +1,10 @@
-﻿using Common;
+﻿using CommongRPC;
 
-namespace gRPCClient;
+namespace gRPCClient.Helpers;
 
-public static class SendMessagesHandler
+public static class MessageHelper
 {
-    public static ClientRegistration SetMessageTopics(this ClientRegistration clientRegistration)
+    public static TopicMessage SetMessageTopics(this TopicMessage message)
     {
         int receivers;
         string receiversNumber;
@@ -20,13 +20,15 @@ public static class SendMessagesHandler
             do
             {
                 Console.WriteLine("Insert topic name".AddInsertPrefix());
-                 receiver = Console.ReadLine()!;
+                receiver = Console.ReadLine()!;
             } while (string.IsNullOrEmpty(receiver));
-            clientRegistration.Topics.Add(receiver);
-        }
-        return clientRegistration;
-    }
 
+            message.Topics.Add(receiver);
+        }
+
+        return message;
+    }
+    
     public static TopicMessage SetMessageContent(this TopicMessage message)
     {
         string msg;
@@ -36,7 +38,6 @@ public static class SendMessagesHandler
             msg = Console.ReadLine()!;
         } while (string.IsNullOrEmpty(msg));
         message.Message = msg;
-
         return message;
     }
     
@@ -46,27 +47,15 @@ public static class SendMessagesHandler
         return message;
     }
     
-    public static TopicMessage AddClientTopics(this TopicMessage message)
+    public static TopicMessageResponse HandleMessageResponse(this TopicMessageResponse message)
     {
-        int receivers;
-        string receiversNumber;
-        do
+        Console.WriteLine($"Received a message from {message.ClientId}".AddInfoPrefix());
+        foreach (var msg in message.Messages)
         {
-            Console.WriteLine("Insert number of topics which messages, your client will consume".AddInsertPrefix());
-            receiversNumber = Console.ReadLine()!;
-        } while (!int.TryParse(receiversNumber, out receivers));
-
-        for (var i = 0; i < receivers; i++)
-        {
-            string receiver;
-            do
-            {
-                Console.WriteLine("Insert topic name".AddInsertPrefix());
-                receiver = Console.ReadLine()!;
-            } while (string.IsNullOrEmpty(receiver));
-            message.Topics.Add(receiver);
+            Console.WriteLine(msg);
         }
 
         return message;
     }
+    
 }

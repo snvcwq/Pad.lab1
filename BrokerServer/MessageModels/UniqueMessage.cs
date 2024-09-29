@@ -9,7 +9,7 @@ public static class UniqueMessage
 
     public static Guid Add(MessageResponse msg)
     {
-        var guid = new Guid();
+        var guid = Guid.NewGuid();
         Messages.TryAdd(guid, msg);
         return guid;
     }

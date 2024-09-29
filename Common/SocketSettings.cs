@@ -8,7 +8,7 @@ public class SocketSettings
     private const int Port = 8001;
 
     /// <summary>
-    /// Creates Socket with generic settings
+    ///     Creates Socket with generic settings
     /// </summary>
     /// <returns>Created Socket and IPEndPoint of socket</returns>
     public async Task<(Socket, IPEndPoint)> CreateSocket()

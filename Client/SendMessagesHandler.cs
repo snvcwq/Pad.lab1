@@ -22,8 +22,9 @@ public static class SendMessagesHandler
             do
             {
                 Console.WriteLine("Insert topic name".AddInsertPrefix());
-                 receiver = Console.ReadLine()!;
+                receiver = Console.ReadLine()!;
             } while (string.IsNullOrEmpty(receiver));
+
             message.Topics.Add(receiver);
         }
     }
@@ -36,12 +37,12 @@ public static class SendMessagesHandler
             Console.WriteLine("Insert Message:".AddInsertPrefix());
             msg = Console.ReadLine()!;
         } while (string.IsNullOrEmpty(msg));
+
         message.JsonContent = msg;
     }
 
     public static async Task<MessageResponse> SendMessageAsync(this Socket socket, Message message)
     {
-        
         await socket.SendAsync(message.JsonSerialize().ToBytes(), SocketFlags.None);
         var buffer = new byte[1_024];
 
@@ -55,7 +56,7 @@ public static class SendMessagesHandler
             Console.WriteLine(response);
         return messageResponse;
     }
-    
+
     public static void AddClientTopics(Message message)
     {
         int receivers;
@@ -74,6 +75,7 @@ public static class SendMessagesHandler
                 Console.WriteLine("Insert topic name".AddInsertPrefix());
                 receiver = Console.ReadLine()!;
             } while (string.IsNullOrEmpty(receiver));
+
             message.Topics.Add(receiver);
         }
     }
@@ -81,27 +83,25 @@ public static class SendMessagesHandler
     public static async Task StarSendingMessagesAsync(this Socket client)
     {
         while (true)
-        {
             try
             {
                 var message = new Message { From = ClientData.Identifier };
                 if (!ClientData.IsRegistered)
                 {
                     Console.WriteLine("Trying to register client".AddInfoPrefix());
-                    SendMessagesHandler.AddClientTopics(message);
+                    AddClientTopics(message);
                     message.RegisterClient = true;
-                    var result =await client.SendMessageAsync(message);
+                    var result = await client.SendMessageAsync(message);
                     if (!result.HasError)
                         ClientData.IsRegistered = true;
-                    _ = Task.Run(() => ReceiveMessageHandler.StartReceivingMessagesAsync(client)); 
-
+                    _ = Task.Run(() => ReceiveMessageHandler.StartReceivingMessagesAsync(client));
                 }
                 else
                 {
                     message.RegisterClient = false;
                     Console.WriteLine("Sending Message:".AddInfoPrefix());
-                    SendMessagesHandler.SetMessageReceivers(message);
-                    SendMessagesHandler.SetMessageContent(message);
+                    SetMessageReceivers(message);
+                    SetMessageContent(message);
                     await client.SendMessageAsync(message);
                 }
             }
@@ -109,6 +109,5 @@ public static class SendMessagesHandler
             {
                 Console.WriteLine($"An error occured when trying to send message Message: {e.Message}".AddInfoPrefix());
             }
-        }
     }
 }

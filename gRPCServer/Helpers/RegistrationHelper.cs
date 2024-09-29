@@ -6,7 +6,8 @@ namespace gRPCServer.Helpers;
 
 public static class RegistrationHelper
 {
-    public static TopicMessageResponse HandleRegistrationRequest(this TopicMessage message, IServerStreamWriter<TopicMessageResponse> responseStream)
+    public static TopicMessageResponse HandleRegistrationRequest(this TopicMessage message,
+        IServerStreamWriter<TopicMessageResponse> responseStream)
     {
         var response = new TopicMessageResponse
         {
@@ -23,13 +24,14 @@ public static class RegistrationHelper
         if (registrationResult)
         {
             response.IsSuccessful = true;
-            response.Messages.Add($"Registration ended successfully,client subscribed to all topics".AddBrokerPrefix());
+            response.Messages.Add("Registration ended successfully,client subscribed to all topics".AddBrokerPrefix());
         }
         else
         {
             response.IsSuccessful = false;
-            response.Messages.Add($"Registration failed. try other Identifier".AddBrokerPrefix());
+            response.Messages.Add("Registration failed. try other Identifier".AddBrokerPrefix());
         }
+
         return response;
     }
 }

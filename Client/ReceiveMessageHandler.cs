@@ -23,10 +23,7 @@ public static class ReceiveMessageHandler
                 var messageResponse = received.FromBytes(buffer).JsonDeserialize<MessageResponse>();
                 if (messageResponse == null) continue;
                 Console.WriteLine("Message received from server:".AddInfoPrefix());
-                foreach (var response in messageResponse.Messages)
-                {
-                    Console.WriteLine(response);
-                }
+                foreach (var response in messageResponse.Messages) Console.WriteLine(response);
             }
         }
         catch (SocketException se)

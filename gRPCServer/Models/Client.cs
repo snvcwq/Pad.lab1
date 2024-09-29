@@ -8,4 +8,3 @@ public class Client
     public List<string> Topics { get; set; } = new();
     public required IServerStreamWriter<TopicMessageResponse> Stream { get; set; }
 }
-

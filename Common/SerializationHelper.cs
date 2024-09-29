@@ -21,7 +21,6 @@ public static class SerializationHelper
         try
         {
             return JsonConvert.DeserializeObject<T>(str);
-
         }
         catch (Exception)
         {

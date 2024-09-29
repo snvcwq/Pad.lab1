@@ -2,7 +2,6 @@
 
 public static class ClientData
 {
-    public static string Identifier { get; set; }
-
     public static bool IsRegistered = false;
+    public static string Identifier { get; set; }
 }

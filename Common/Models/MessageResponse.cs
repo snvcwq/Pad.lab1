@@ -1,4 +1,5 @@
 ﻿namespace Common.Models;
+
 [Serializable]
 public class MessageResponse
 {

@@ -10,6 +10,7 @@ public static class PubSubService
     {
         _ = Task.Run(async () =>
         {
+            
             await foreach (var message in call.ResponseStream.ReadAllAsync())
             {
                 if (message.IsRegistrationResponse)

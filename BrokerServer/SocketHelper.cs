@@ -1,4 +1,5 @@
 ﻿using System.Net.Sockets;
+using BrokerServer.MessageModels;
 using Common;
 using Common.Models;
 
@@ -91,21 +92,29 @@ public static class SocketHelper
     }
     private static async Task<bool> AddClientIfNeededAsync(Socket handler, Message? message, MessageResponse response)
     {
-        if (message.RegisterClient)
-        {
-            foreach (var topic in message.Topics)
-                Topics.Add(topic, handler);
-            response.Messages.Add($"Client successfully subscribed to topics".AddBrokerPrefix());
-            await handler.SendMessage(response);
-            return true;
-        }
-        return false;
+        if (!message.RegisterClient) 
+            return false;
+        foreach (var topic in message.Topics)
+            Topics.Add(topic, (handler, message.From));
+        response.Messages.Add($"Client successfully subscribed to topics".AddBrokerPrefix());
+        await handler.SendMessage(response);
+        var unconsumedMessages = ConsumedMessage.GetUnconsumedMessages(message.From, message.Topics);
+        foreach (var msg in unconsumedMessages)
+            await handler.SendMessage(msg);
+        return true;
     }
     
     private static async Task ForwardMessageToRecipientsAsync(Message? message, MessageResponse response)
     {
+        
         await Parallel.ForEachAsync(message?.Topics!,  async (topic, _) =>
         {
+            var msg = new MessageResponse();
+            msg.Messages.Add("----------------------------------------------------------");
+            msg.Messages.Add($"You got a message from {message.From} using topic {topic}");
+            msg.Messages.Add(message.JsonContent.ToString()!);
+            msg.Messages.Add("----------------------------------------------------------");
+            var msgGuid = UniqueMessage.Add(msg);
             var clients = Topics.GetTopicClients(topic);
             if(!clients.Any())
                 response.Messages.Add($"No client is consuming {topic} topic".AddBrokerPrefix());
@@ -113,15 +122,13 @@ public static class SocketHelper
             {
                 await Parallel.ForEachAsync(clients, _, async (client, _) =>
                 {
-                        var msg = new MessageResponse();
-                        msg.Messages.Add("----------------------------------------------------------");
-                        msg.Messages.Add($"You got a message from {message.From} threw topic {topic}");
-                        msg.Messages.Add(message.JsonContent.ToString()!);
-                        msg.Messages.Add("----------------------------------------------------------");
-                        await client.SendMessage(msg);
+                        await client.Item1.SendMessage(msg);
+                        ConsumedMessage.Add(client.Item2, msgGuid);
+                        
                 });
                 response.Messages.Add($"All {topic} consumers got the message".AddBrokerPrefix());
             }
+            Topics.AddMessage(topic, msgGuid);
         });
     }
 }

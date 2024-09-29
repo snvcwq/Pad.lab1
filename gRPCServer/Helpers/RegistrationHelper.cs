@@ -23,7 +23,7 @@ public static class RegistrationHelper
         if (registrationResult)
         {
             response.IsSuccessful = true;
-            response.Messages.Add($"Registration ended successfully,client subscribed to {string.Concat(", ", message.Topics.ToList())}".AddBrokerPrefix());
+            response.Messages.Add($"Registration ended successfully,client subscribed to all topics".AddBrokerPrefix());
         }
         else
         {

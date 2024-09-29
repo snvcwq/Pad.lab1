@@ -1,4 +1,5 @@
 ﻿using CommongRPC;
+using gRPCClient.ClientMetaData;
 
 namespace gRPCClient.Helpers;
 
@@ -28,7 +29,7 @@ public static class MessageHelper
 
         return message;
     }
-    
+
     public static TopicMessage SetMessageContent(this TopicMessage message)
     {
         string msg;
@@ -37,25 +38,22 @@ public static class MessageHelper
             Console.WriteLine("Insert Message:".AddInsertPrefix());
             msg = Console.ReadLine()!;
         } while (string.IsNullOrEmpty(msg));
+
         message.Message = msg;
         return message;
     }
-    
+
     public static TopicMessage AddClientIdentifier(this TopicMessage message)
     {
         message.ClientId = ClientData.Identifier;
         return message;
     }
-    
+
     public static TopicMessageResponse HandleMessageResponse(this TopicMessageResponse message)
     {
-        Console.WriteLine($"Received a message from {message.ClientId}".AddInfoPrefix());
-        foreach (var msg in message.Messages)
-        {
-            Console.WriteLine(msg);
-        }
+        Console.WriteLine("Received a message".AddInfoPrefix());
+        foreach (var msg in message.Messages) Console.WriteLine(msg);
 
         return message;
     }
-    
 }

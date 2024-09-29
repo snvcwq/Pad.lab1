@@ -1,4 +1,4 @@
-﻿namespace gRPCClient;
+﻿namespace gRPCClient.ClientMetaData;
 
 public static class ClientData
 {

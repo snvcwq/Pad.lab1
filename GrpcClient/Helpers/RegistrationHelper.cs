@@ -1,4 +1,5 @@
 ﻿using CommongRPC;
+using gRPCClient.ClientMetaData;
 
 namespace gRPCClient.Helpers;
 
@@ -12,7 +13,7 @@ public static class RegistrationHelper
             ClientData.Identifier = Console.ReadLine()!;
         } while (string.IsNullOrEmpty(ClientData.Identifier));
     }
-    
+
     public static TopicMessage AddClientTopics(this TopicMessage message)
     {
         int receivers;
@@ -34,27 +35,24 @@ public static class RegistrationHelper
 
             message.Topics.Add(receiver);
         }
+
         return message;
     }
-    
+
     public static TopicMessage SetRegistrationMethod(this TopicMessage message)
     {
         message.IsRegistrationMessage = true;
         return message;
     }
-    
+
     public static TopicMessageResponse HandleRegistrationResponse(this TopicMessageResponse message)
     {
         Console.WriteLine($"Registration attempt ended with result: {message.IsSuccessful}".AddInfoPrefix());
-        foreach (var msg in message.Messages)
-        {
-            Console.WriteLine(msg);
-        }
+        foreach (var msg in message.Messages) Console.WriteLine(msg);
 
         if (message.IsSuccessful)
             ClientData.IsRegistered = true;
 
         return message;
     }
-    
 }
